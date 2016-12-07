@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+    <meta charset='utf-8'>
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <meta name="description" content="Josephpjordan.GitHub.io : Test of github pages">
+
+    <link rel="stylesheet" type="text/css" media="screen" href="stylesheets/stylesheet.css">
+
+    <title>Josephpjordan.GitHub.io</title>
+  </head>
+
+  <body>
+
+    <!-- HEADER -->
+    <div id="header_wrap" class="outer">
+        <header class="inner">
+          <a id="forkme_banner" href="https://github.com/JosephPJordan">View on GitHub</a>
+
+          <h1 id="project_title">Josephpjordan.GitHub.io</h1>
+          <h2 id="project_tagline">Test of github pages</h2>
+
+        </header>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div id="main_content_wrap" class="outer">
+      <section id="main_content" class="inner">
+        <h1>
+<a id="deploying-the-big-ip-ve-in-azure---single-nic" class="anchor" href="#deploying-the-big-ip-ve-in-azure---single-nic" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Deploying the BIG-IP VE in Azure - Single NIC</h1>
+
+<p><a href="https://f5cloudsolutions.herokuapp.com"><img src="https://f5cloudsolutions.herokuapp.com/badge.svg" alt="Slack Status"></a>
+<a href="https://support.f5.com/kb/en-us/products/big-ip_ltm/manuals/product/bigip-ve-setup-msft-azure-12-1-0.html"><img src="http://readthedocs.org/projects/f5-sdk/badge/?version=latest" alt="Doc Status"></a></p>
+
+<h2>
+<a id="introduction" class="anchor" href="#introduction" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Introduction</h2>
+
+<p>This solution implements an ARM Template to deploy a base example of F5 in a cloud-focused single NIC deployment.  This is the standard Cloud design where the compute instance of
+F5 is running with a single interface, where both management and data plane traffic is processed.  This is a traditional model in the cloud where the deployment is considered one-armed.</p>
+
+<p>See the <a href="#config">Configuration Example</a> section for a configuration diagram and description for this solution.</p>
+
+<h2>
+<a id="documentation" class="anchor" href="#documentation" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Documentation</h2>
+
+<p>The <strong><em>BIG-IP Virtual Edition and Microsoft Azure: Setup</em></strong> guide (<a href="https://support.f5.com/kb/en-us/products/big-ip_ltm/manuals/product/bigip-ve-setup-msft-azure-12-1-0.html">https://support.f5.com/kb/en-us/products/big-ip_ltm/manuals/product/bigip-ve-setup-msft-azure-12-1-0.html</a>) decribes how to create the configuration manually without using the ARM template.</p>
+
+<h2>
+<a id="installation" class="anchor" href="#installation" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Installation</h2>
+
+<p>You have three options for deploying this template:</p>
+
+<ul>
+<li>Using the Azure deploy button</li>
+<li>Using <a href="#powershell">PowerShell</a>
+</li>
+<li>Using <a href="#cli">CLI Tools</a>
+</li>
+</ul>
+
+<h3>
+<a id="azure-deploy-button" class="anchor" href="#azure-deploy-button" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a><a name="azure"></a>Azure deploy button</h3>
+
+<p>Use this button to deploy the template:</p>
+
+<p><a href="https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FF5Networks%2Ff5-azure-arm-templates%2Fmaster%2Fexperimental%2Fstandalone%2F1nic%2Fazuredeploy.json">
+    <img src="http://azuredeploy.net/deploybutton.png">
+</a></p>
+
+<h3>
+<a id="template-parameters" class="anchor" href="#template-parameters" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Template parameters</h3>
+
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Required</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>adminUsername</td>
+<td>x</td>
+<td>A user name to login to the BIG-IPs.  The default value is "azureuser".</td>
+</tr>
+<tr>
+<td>adminPassword</td>
+<td>x</td>
+<td>A strong password for the BIG-IPs. Remember this password; you will need it later.</td>
+</tr>
+<tr>
+<td>dnsLabel</td>
+<td>x</td>
+<td>Unique DNS Name for the public IP address used to access the BIG-IPs for management.</td>
+</tr>
+<tr>
+<td>instanceName</td>
+<td>x</td>
+<td>The hostname to be configured for the VM.</td>
+</tr>
+<tr>
+<td>instanceType</td>
+<td>x</td>
+<td>The desired Azure Virtual Machine instance size.</td>
+</tr>
+<tr>
+<td>imageName</td>
+<td>x</td>
+<td>The desired F5 image to deploy.</td>
+</tr>
+<tr>
+<td>licenseKey1</td>
+<td>x</td>
+<td>The license token from the F5 licensing server. This license will be used for the first F5 BIG-IP.</td>
+</tr>
+<tr>
+<td>restrictedSrcAddress</td>
+<td>x</td>
+<td>Restricts management access to a specific network or address. Enter a IP address or address range in CIDR notation, or asterisk for all sources.</td>
+</tr>
+<tr>
+<td>tagValues</td>
+<td>x</td>
+<td>Additional key-value pair tags to be added to each Azure resource.</td>
+</tr>
+</tbody>
+</table>
+
+<h3>
+<a id="powershell-script-example" class="anchor" href="#powershell-script-example" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a><a name="powershell"></a>PowerShell Script Example</h3>
+
+<div class="highlight highlight-source-powershell"><pre>    <span class="pl-c"># Params below match to parameteres in the azuredeploy.json that are gen-unique, otherwsie pointing to</span>
+    <span class="pl-c"># the azuredeploy.parameters.json file for default values.  Some options below are mandatory, some(such as deployment password for BIG IP)</span>
+    <span class="pl-c"># can be supplied inline when running this script but if they arent then the default will be used as specificed in below param arguments</span>
+    <span class="pl-c"># Example Command: .\Deploy_via_PS.ps1 -adminUsername azureuser -adminPassword yourpassword -dnsLabel f51nicdeploy01 -instanceName f51nic -licenseKey1 XXXXX-XXXXX-XXXXX-XXXXX-XXXXX -resourceGroupName f51nicdeploy01 -EmailTo user@f5.com</span>
+
+    <span class="pl-k">param</span><span class="pl-k">(</span>
+    <span class="pl-ent">[Paramete<span class="pl-ent">r</span></span><span class="pl-e">(<span class="pl-e"><span class="pl-e"><span class="pl-c1">Mandatory</span>=<span class="pl-smi">$True</span></span></span>)</span><span class="pl-ent">]</span>
+    <span class="pl-e">[string]</span>
+    <span class="pl-k">$</span><span class="pl-smi">adminUsername</span><span class="pl-k">,</span>
+
+    <span class="pl-ent">[Paramete<span class="pl-ent">r</span></span><span class="pl-e">(<span class="pl-e"><span class="pl-e"><span class="pl-c1">Mandatory</span>=<span class="pl-smi">$True</span></span></span>)</span><span class="pl-ent">]</span>
+    <span class="pl-e">[string]</span>
+    <span class="pl-k">$</span><span class="pl-smi">adminPassword</span><span class="pl-k">,</span>
+
+    <span class="pl-ent">[Paramete<span class="pl-ent">r</span></span><span class="pl-e">(<span class="pl-e"><span class="pl-e"><span class="pl-c1">Mandatory</span>=<span class="pl-smi">$True</span></span></span>)</span><span class="pl-ent">]</span>
+    <span class="pl-e">[string]</span>
+    <span class="pl-k">$</span><span class="pl-smi">dnsLabel</span><span class="pl-k">,</span>
+
+    <span class="pl-ent">[Paramete<span class="pl-ent">r</span></span><span class="pl-e">(<span class="pl-e"><span class="pl-e"><span class="pl-c1">Mandatory</span>=<span class="pl-smi">$True</span></span></span>)</span><span class="pl-ent">]</span>
+    <span class="pl-e">[string]</span>
+    <span class="pl-k">$</span><span class="pl-smi">instanceName</span><span class="pl-k">,</span>
+
+    <span class="pl-e">[string]</span>
+    <span class="pl-k">$</span><span class="pl-smi">instanceType</span> <span class="pl-k">=</span> <span class="pl-s">"Standard_D2_v2"</span><span class="pl-k">,</span>
+
+    <span class="pl-e">[string]</span>
+    <span class="pl-k">$</span><span class="pl-smi">imageName</span> <span class="pl-k">=</span> <span class="pl-s">"Best"</span><span class="pl-k">,</span>
+
+    <span class="pl-ent">[Paramete<span class="pl-ent">r</span></span><span class="pl-e">(<span class="pl-e"><span class="pl-e"><span class="pl-c1">Mandatory</span>=<span class="pl-smi">$True</span></span></span>)</span><span class="pl-ent">]</span>
+    <span class="pl-e">[string]</span>
+    <span class="pl-k">$</span><span class="pl-smi">licenseKey1</span><span class="pl-k">,</span>
+
+    <span class="pl-e">[string]</span>
+    <span class="pl-k">$</span><span class="pl-smi">restrictedSrcAddress</span>  <span class="pl-k">=</span> <span class="pl-s">"*"</span><span class="pl-k">,</span>
+
+    <span class="pl-ent">[Paramete<span class="pl-ent">r</span></span><span class="pl-e">(<span class="pl-e"><span class="pl-e"><span class="pl-c1">Mandatory</span>=<span class="pl-smi">$True</span></span></span>)</span><span class="pl-ent">]</span>
+    <span class="pl-e">[string]</span>
+    <span class="pl-k">$</span><span class="pl-smi">resourceGroupName</span><span class="pl-k">,</span>
+
+    <span class="pl-e">[string]</span>
+    <span class="pl-k">$</span><span class="pl-smi">region</span> <span class="pl-k">=</span> <span class="pl-s">"West US"</span><span class="pl-k">,</span>
+
+    <span class="pl-e">[string]</span>
+    <span class="pl-k">$</span><span class="pl-smi">templateFilePath</span> <span class="pl-k">=</span> <span class="pl-s">"azuredeploy.json"</span><span class="pl-k">,</span>
+
+    <span class="pl-e">[string]</span>
+    <span class="pl-k">$</span><span class="pl-smi">parametersFilePath</span> <span class="pl-k">=</span> <span class="pl-s">"azuredeploy.parameters.json"</span>
+    <span class="pl-k">)</span>
+
+    <span class="pl-c1">Write-Host</span> <span class="pl-s">"Disclaimer: Scripting to Deploy F5 Solution templates into Cloud Environments are provided as examples. They will be treated as best effort for issues that occur, feedback is encouraged."</span> <span class="pl-k">-</span>foregroundcolor green
+    <span class="pl-c1">Start-Sleep</span> <span class="pl-k">-</span>s <span class="pl-c1"><span class="pl-c1">3</span></span>
+
+    <span class="pl-c"># Connect to Azure, right now it is only interactive login</span>
+    <span class="pl-k">try</span> {
+        <span class="pl-c1">Write-Host</span> <span class="pl-s">"Checking if already logged in!"</span>
+        <span class="pl-c1">Get-AzureRmSubscription</span> <span class="pl-k">|</span> <span class="pl-c1">Out-Null</span>
+        <span class="pl-c1">Write-Host</span> <span class="pl-s">"Already logged in, continuing..."</span>
+        }
+        <span class="pl-k">Catch</span> {
+        <span class="pl-c1">Write-Host</span> <span class="pl-s">"Not logged in, please login..."</span>
+        Login<span class="pl-k">-</span>AzureRmAccount
+        }
+
+    <span class="pl-c"># Create Resource Group for ARM Deployment</span>
+    <span class="pl-c1">New-AzureRmResourceGroup</span> <span class="pl-k">-</span>Name <span class="pl-k">$</span><span class="pl-smi">resourceGroupName</span> <span class="pl-k">-</span>Location <span class="pl-s">"<span class="pl-k">$</span><span class="pl-smi">region</span>"</span>
+
+    <span class="pl-c"># Create Arm Deployment</span>
+    <span class="pl-k">$</span><span class="pl-c1">pwd</span> <span class="pl-k">=</span> <span class="pl-c1">ConvertTo-SecureString</span> <span class="pl-k">-</span>String <span class="pl-k">$</span><span class="pl-smi">adminPassword</span> <span class="pl-k">-</span>AsPlainText <span class="pl-k">-</span>Force
+    <span class="pl-k">$</span><span class="pl-smi">deployment</span> <span class="pl-k">=</span> <span class="pl-c1">New-AzureRmResourceGroupDeployment</span> <span class="pl-k">-</span>Name <span class="pl-k">$</span><span class="pl-smi">resourceGroupName</span> <span class="pl-k">-</span>ResourceGroupName <span class="pl-k">$</span><span class="pl-smi">resourceGroupName</span> <span class="pl-k">-</span>TemplateFile <span class="pl-k">$</span><span class="pl-smi">templateFilePath</span> <span class="pl-k">-</span>TemplateParameterFile <span class="pl-k">$</span><span class="pl-smi">parametersFilePath</span> <span class="pl-k">-</span>Verbose <span class="pl-k">-</span>adminUsername <span class="pl-s">"<span class="pl-k">$</span><span class="pl-smi">adminUsername</span>"</span> <span class="pl-k">-</span>adminPassword <span class="pl-k">$</span><span class="pl-c1">pwd</span> <span class="pl-k">-</span>dnsLabel <span class="pl-s">"<span class="pl-k">$</span><span class="pl-smi">dnsLabel</span>"</span> <span class="pl-k">-</span>instanceName <span class="pl-s">"<span class="pl-k">$</span><span class="pl-smi">instanceName</span>"</span> <span class="pl-k">-</span>instanceType <span class="pl-s">"<span class="pl-k">$</span><span class="pl-smi">instanceType</span>"</span> <span class="pl-k">-</span>licenseKey1 <span class="pl-s">"<span class="pl-k">$</span><span class="pl-smi">licenseKey1</span>"</span> <span class="pl-k">-</span>restrictedSrcAddress <span class="pl-s">"<span class="pl-k">$</span><span class="pl-smi">restrictedSrcAddress</span>"</span> <span class="pl-k">-</span>imageName <span class="pl-s">"<span class="pl-k">$</span><span class="pl-smi">imageName</span>"</span>
+
+    <span class="pl-c"># Print Output of Deployment to Console</span>
+    <span class="pl-k">$</span><span class="pl-smi">deployment</span></pre></div>
+
+<h1></h1>
+
+<h3>
+<a id="azure-cli10-script-example" class="anchor" href="#azure-cli10-script-example" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a><a name="cli"></a>Azure CLI(1.0) Script Example</h3>
+
+<div class="highlight highlight-source-shell"><pre>    <span class="pl-c">#!/bin/bash</span>
+
+    <span class="pl-c"># Bash Script to deploy an ARM template into Azure, using azure cli 1.0</span>
+    <span class="pl-c"># Example Command: ./deploy_via_bash.sh --adminusr azureuser --adminpwd 'yourpassword' --dnslabel f5dnslabel --instname f5vm01 --key1 XXXXX-XXXXX-XXXXX-XXXXX-XXXXX --rgname f5rgname --azureusr administrator@domain.com --azurepwd 'yourpassword'</span>
+
+    <span class="pl-c"># Assign Script Paramters and Define Variables</span>
+    <span class="pl-c"># Specify static items, change these as needed or make them parameters (instance_type is already an optional paramter)</span>
+    region=<span class="pl-s"><span class="pl-pds">"</span>westus<span class="pl-pds">"</span></span>
+    template_file=<span class="pl-s"><span class="pl-pds">"</span>azuredeploy.json<span class="pl-pds">"</span></span>
+    parameter_file=<span class="pl-s"><span class="pl-pds">"</span>azuredeploy.parameters.json<span class="pl-pds">"</span></span>
+    instance_type=<span class="pl-s"><span class="pl-pds">"</span>Standard_D2_v2<span class="pl-pds">"</span></span>
+    image_name=<span class="pl-s"><span class="pl-pds">"</span>Best<span class="pl-pds">"</span></span>
+    restricted_source_address=<span class="pl-s"><span class="pl-pds">"</span>*<span class="pl-pds">"</span></span>
+    tag_values=<span class="pl-s"><span class="pl-pds">"</span>{<span class="pl-cce">\"</span>application<span class="pl-cce">\"</span>:<span class="pl-cce">\"</span>APP<span class="pl-cce">\"</span>,<span class="pl-cce">\"</span>environment<span class="pl-cce">\"</span>:<span class="pl-cce">\"</span>ENV<span class="pl-cce">\"</span>,<span class="pl-cce">\"</span>group<span class="pl-cce">\"</span>:<span class="pl-cce">\"</span>GROUP<span class="pl-cce">\"</span>,<span class="pl-cce">\"</span>owner<span class="pl-cce">\"</span>:<span class="pl-cce">\"</span>OWNER<span class="pl-cce">\"</span>,<span class="pl-cce">\"</span>cost<span class="pl-cce">\"</span>:<span class="pl-cce">\"</span>COST<span class="pl-cce">\"</span>}<span class="pl-pds">"</span></span>
+
+    ARGS=<span class="pl-s"><span class="pl-pds">`</span>getopt -o a:b:c:d:e:f:g:h:i:j:k: --long adminusr:,adminpwd:,dnslabel:,instname:,insttype:,imgname:,key1:,rstsrcaddr:,rgname:,azureusr:,azurepwd: -n <span class="pl-smi">$0</span> -- <span class="pl-s"><span class="pl-pds">"</span><span class="pl-smi">$@</span><span class="pl-pds">"</span></span><span class="pl-pds">`</span></span>
+    <span class="pl-c1">eval</span> <span class="pl-c1">set</span> -- <span class="pl-s"><span class="pl-pds">"</span><span class="pl-smi">$ARGS</span><span class="pl-pds">"</span></span>
+
+
+    <span class="pl-c"># Parse the command line arguments, primarily checking full params as short params are just placeholders</span>
+    <span class="pl-k">while</span> <span class="pl-c1">true</span><span class="pl-k">;</span> <span class="pl-k">do</span>
+        <span class="pl-k">case</span> <span class="pl-s"><span class="pl-pds">"</span><span class="pl-smi">$1</span><span class="pl-pds">"</span></span> in
+            -a|--adminusr)
+                admin_username=<span class="pl-smi">$2</span>
+                <span class="pl-c1">shift</span> 2;;
+            -b|--adminpwd)
+                admin_password=<span class="pl-smi">$2</span>
+                <span class="pl-c1">shift</span> 2;;
+            -c|--dnslabel)
+                dns_label=<span class="pl-smi">$2</span>
+                <span class="pl-c1">shift</span> 2;;
+            -d|--instname)
+                instance_name=<span class="pl-smi">$2</span>
+                <span class="pl-c1">shift</span> 2;;
+            -e|--insttype)
+                instance_type=<span class="pl-smi">$2</span>
+                <span class="pl-c1">shift</span> 2;;
+            -f|--imgname)
+                image_name=<span class="pl-smi">$2</span>
+                <span class="pl-c1">shift</span> 2;;
+            -g|--key1)
+                license_key_1=<span class="pl-smi">$2</span>
+                <span class="pl-c1">shift</span> 2;;
+            -h|--rstsrcaddr)
+                restricted_source_address=<span class="pl-smi">$2</span>
+                <span class="pl-c1">shift</span> 2;;
+            -i|--rgname)
+                resource_group_name=<span class="pl-smi">$2</span>
+                <span class="pl-c1">shift</span> 2;;
+            -j|--azureusr)
+                azure_user=<span class="pl-smi">$2</span>
+                <span class="pl-c1">shift</span> 2;;
+            -k|--azurepwd)
+                azure_pwd=<span class="pl-smi">$2</span>
+                <span class="pl-c1">shift</span> 2;;
+            --)
+                <span class="pl-c1">shift</span>
+                <span class="pl-c1">break</span>;;
+        <span class="pl-k">esac</span>
+    <span class="pl-k">done</span>
+
+    <span class="pl-c1">echo</span> <span class="pl-s"><span class="pl-pds">"</span>Disclaimer: Scripting to Deploy F5 Solution templates into Cloud Environments are provided as examples. They will be treated as best effort for issues that occur, feedback is encouraged.<span class="pl-pds">"</span></span>
+    sleep 3
+
+    <span class="pl-c">#If a required paramater is not passed, the script will prompt for it below</span>
+    required_variables=<span class="pl-s"><span class="pl-pds">"</span>admin_username admin_password dns_label instance_name license_key_1 resource_group_name azure_user azure_pwd<span class="pl-pds">"</span></span>
+    <span class="pl-k">for</span> <span class="pl-smi">variable</span> <span class="pl-k">in</span> <span class="pl-smi">$required_variables</span>
+            <span class="pl-k">do</span>
+            <span class="pl-k">if</span> [ -v <span class="pl-smi">${<span class="pl-k">!</span>variable}</span> ] <span class="pl-k">;</span> <span class="pl-k">then</span>
+                    <span class="pl-c1">read</span> -p <span class="pl-s"><span class="pl-pds">"</span>Please enter value for <span class="pl-smi">$variable</span>:<span class="pl-pds">"</span></span> <span class="pl-smi">$variable</span>
+            <span class="pl-k">fi</span>
+    <span class="pl-k">done</span>
+
+    <span class="pl-c"># Login to Azure, for simplicity in this example using username and password supplied as script arguments --azureusr and --azurepwd</span>
+    <span class="pl-c"># Perform Check to see if already logged in</span>
+    azure account show <span class="pl-k">&gt;</span> /dev/null <span class="pl-k">2&gt;&amp;1</span>
+    <span class="pl-k">if</span> [[ <span class="pl-smi">$?</span> <span class="pl-k">!=</span> 0 ]] <span class="pl-k">;</span> <span class="pl-k">then</span>
+            azure login -u <span class="pl-smi">$azure_user</span> -p <span class="pl-smi">$azure_pwd</span>
+    <span class="pl-k">fi</span>
+
+    <span class="pl-c"># Switch to ARM mode</span>
+    azure config mode arm
+
+    <span class="pl-c"># Create ARM Group</span>
+    azure group create -n <span class="pl-smi">$resource_group_name</span> -l <span class="pl-smi">$region</span>
+
+    <span class="pl-c"># Deploy ARM Template, right now cannot specify parameter file AND parameters inline via Azure CLI,</span>
+    <span class="pl-c"># such as can been done with Powershell...oh well!</span>
+    azure group deployment create -f <span class="pl-smi">$template_file</span> -g <span class="pl-smi">$resource_group_name</span> -n <span class="pl-smi">$resource_group_name</span> -p <span class="pl-s"><span class="pl-pds">"</span>{<span class="pl-cce">\"</span>adminUsername<span class="pl-cce">\"</span>:{<span class="pl-cce">\"</span>value<span class="pl-cce">\"</span>:<span class="pl-cce">\"</span><span class="pl-smi">$admin_username</span><span class="pl-cce">\"</span>},<span class="pl-cce">\"</span>adminPassword<span class="pl-cce">\"</span>:{<span class="pl-cce">\"</span>value<span class="pl-cce">\"</span>:<span class="pl-cce">\"</span><span class="pl-smi">$admin_password</span><span class="pl-cce">\"</span>},<span class="pl-cce">\"</span>dnsLabel<span class="pl-cce">\"</span>:{<span class="pl-cce">\"</span>value<span class="pl-cce">\"</span>:<span class="pl-cce">\"</span><span class="pl-smi">$dns_label</span><span class="pl-cce">\"</span>},<span class="pl-cce">\"</span>instanceName<span class="pl-cce">\"</span>:{<span class="pl-cce">\"</span>value<span class="pl-cce">\"</span>:<span class="pl-cce">\"</span><span class="pl-smi">$instance_name</span><span class="pl-cce">\"</span>},<span class="pl-cce">\"</span>instanceType<span class="pl-cce">\"</span>:{<span class="pl-cce">\"</span>value<span class="pl-cce">\"</span>:<span class="pl-cce">\"</span><span class="pl-smi">$instance_type</span><span class="pl-cce">\"</span>},<span class="pl-cce">\"</span>licenseKey1<span class="pl-cce">\"</span>:{<span class="pl-cce">\"</span>value<span class="pl-cce">\"</span>:<span class="pl-cce">\"</span><span class="pl-smi">$license_key_1</span><span class="pl-cce">\"</span>},<span class="pl-cce">\"</span>imageName<span class="pl-cce">\"</span>:{<span class="pl-cce">\"</span>value<span class="pl-cce">\"</span>:<span class="pl-cce">\"</span><span class="pl-smi">$image_name</span><span class="pl-cce">\"</span>},<span class="pl-cce">\"</span>restrictedSrcAddress<span class="pl-cce">\"</span>:{<span class="pl-cce">\"</span>value<span class="pl-cce">\"</span>:<span class="pl-cce">\"</span><span class="pl-smi">$restricted_source_address</span><span class="pl-cce">\"</span>},<span class="pl-cce">\"</span>tagValues<span class="pl-cce">\"</span>:{<span class="pl-cce">\"</span>value<span class="pl-cce">\"</span>:<span class="pl-smi">$tag_values</span>}}<span class="pl-pds">"</span></span>
+</pre></div>
+
+<h2>
+<a id="configuration-example-" class="anchor" href="#configuration-example-" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Configuration Example <a name="config"></a>
+</h2>
+
+<p>The following is a simple configuration diagram for this single NIC deployment. In this scenario, all access to the BIG-IP VE appliance is through the same IP address and virtual network interface (vNIC).  This interface processes both management and data plane traffic.</p>
+
+<p>Note that while the Management Port shown in the following example is <strong>443</strong>, you can alternatively use <strong>8443</strong> in your configuration.</p>
+
+<p><img src="images/azure-1nic-sm.png" alt="Single NIC configuration example"></p>
+
+<h2>
+<a id="design-patterns" class="anchor" href="#design-patterns" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Design Patterns</h2>
+
+<p>The goal is for the design patterns for all the iterative examples of F5 being deployed via ARM templates to closely match as much as possible.</p>
+
+<h3>
+<a id="list-of-patterns-for-contributing-developers" class="anchor" href="#list-of-patterns-for-contributing-developers" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>List of Patterns For Contributing Developers</h3>
+
+<ol>
+<li>Still working on patterns to use</li>
+</ol>
+
+<h2>
+<a id="filing-issues" class="anchor" href="#filing-issues" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Filing Issues</h2>
+
+<p>See the Issues section of <code>Contributing &lt;CONTRIBUTING.md&gt;</code>__.</p>
+
+<h2>
+<a id="contributing" class="anchor" href="#contributing" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Contributing</h2>
+
+<p>See <code>Contributing &lt;CONTRIBUTING.md&gt;</code>__</p>
+
+<h2>
+<a id="test" class="anchor" href="#test" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Test</h2>
+
+<p>Before you open a pull request, your code must have passed a deployment into Azure with the intended result</p>
+
+<h2>
+<a id="unit-tests" class="anchor" href="#unit-tests" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Unit Tests</h2>
+
+<p>Simply deploying the ARM template and completing use case fulfills a functional test</p>
+
+<h2>
+<a id="copyright" class="anchor" href="#copyright" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Copyright</h2>
+
+<p>Copyright 2014-2016 F5 Networks Inc.</p>
+
+<h2>
+<a id="license" class="anchor" href="#license" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>License</h2>
+
+<p>Apache V2.0</p>
+
+<pre><code>Licensed under the Apache License, Version 2.0 (the "License"); you may not use
+this file except in compliance with the License. You may obtain a copy of the
+License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and limitations
+under the License.
+
+Contributor License Agreement
+</code></pre>
+
+<p>Individuals or business entities who contribute to this project must have
+completed and submitted the <code>F5 Contributor License Agreement</code></p>
+      </section>
+    </div>
+
+    <!-- FOOTER  -->
+    <div id="footer_wrap" class="outer">
+      <footer class="inner">
+        <p>Published with <a href="https://pages.github.com">GitHub Pages</a></p>
+      </footer>
+    </div>
+
+    
+
+  </body>
+</html>
